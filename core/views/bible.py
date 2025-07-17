@@ -5,6 +5,19 @@ from ..services.bible_queries import get_all_verses_of_book, get_chapter_verses,
 
 @api_view(['GET'])
 def get_verses(request, version, book, chapter, verses):
+    """
+    Retorna versículos específico da Bíblia indicados no último parametro.
+
+    Parâmetros:
+    - version: Abreviação da versão bíblica (ex: 'nvi')
+    - book: Abreviação do livro bíblico (ex: 'gn' para Gênesis)
+    - chapter: Número do capítulo
+    - verses: Número do versículo inicial seguido pelo final separado por um "-" (hífen)
+
+    Retorna:
+    - Lista de versículos com id, número, texto, capítulo, livro e versão
+    """
+
     if '-' in verses:
         start, end = map(int, verses.split('-'))
     else:
@@ -12,8 +25,31 @@ def get_verses(request, version, book, chapter, verses):
 
     data = get_verses_by_range(version, book, chapter, start, end)
 
-    # Agora os dados já são dicionários, não precisa mapear de novo
-    return Response(data)
+    if not data:
+        return Response({"detail": "Nenhum versículo encontrado."}, status=404)
+
+    # Pega informações únicas do primeiro versículo (pois são iguais em todos)
+    first_row = data[0]
+
+    response = {
+        "version": first_row["version"],
+        "book": {
+            "abbreviation": book,
+            "name": first_row["book"]
+        },
+        "chapter": int(chapter),
+        "verses": [
+            {
+                "id": row["verse_id"],
+                "number": row["number"],
+                "text": row["text"]
+            }
+            for row in data
+        ]
+    }
+
+    return Response(response)
+
 
 from collections import defaultdict
 
@@ -47,7 +83,6 @@ def get_book(request, version, book):
     })
 
 
-
 @api_view(['GET'])
 def get_chapter(request, version, book, chapter):
 
@@ -65,5 +100,28 @@ def get_chapter(request, version, book, chapter):
 
     data = get_chapter_verses(version, book, chapter)
 
-    return Response(data)
+    if not data:
+        return Response({"detail": "Nenhum versículo encontrado."}, status=404)
+
+    # Pega informações únicas do primeiro versículo (pois são iguais em todos)
+    first_row = data[0]
+
+    response = {
+        "version": first_row["version"],
+        "book": {
+            "abbreviation": book,
+            "name": first_row["book"]
+        },
+        "chapter": int(chapter),
+        "verses": [
+            {
+                "id": row["verse_id"],
+                "number": row["verse_number"],
+                "text": row["text"]
+            }
+            for row in data
+        ]
+    }
+
+    return Response(response)
 
