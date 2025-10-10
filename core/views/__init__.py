@@ -1,1 +1,0 @@
-from .bible import get_book, get_chapter, get_chapter_verses
