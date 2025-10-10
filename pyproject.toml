@@ -15,6 +15,7 @@ psycopg2-binary = "^2.9.10"
 pillow = "^11.2.1"
 drf-yasg = {extras = ["standard"], version = "^1.21.10"}
 django-cors-headers = "^4.7.0"
+gunicorn = "23.0.0"
 
 
 [build-system]

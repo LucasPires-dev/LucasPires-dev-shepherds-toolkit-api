@@ -40,10 +40,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third party apps
     'rest_framework',
-    'core.apps.CoreConfig',
-    'drf_yasg',
-    'corsheaders'
+    'rest_framework.authtoken',
+    'corsheaders',
+    'django_filters',
+
+    # Local apps
+    'apps.users',
+    'apps.bible',
+    'apps.sermons',
+    'apps.goals',
+    'apps.events',
+    'apps.members',
+    'apps.prayers',
+    'apps.finances',
+    'apps.library',
+    'apps.ai',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
@@ -57,13 +72,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOW_ALL_ORIGINS = False  # Em produção, use False
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite
+    "http://localhost:3000",  # React
 ]
-
-"CORS_ALLOW_ALL_ORIGINS = True"
-
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -136,19 +149,43 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+# Use custom user model
+AUTH_USER_MODEL = 'users.User'
+
+# Database configuration: default to sqlite for local dev. To use Postgres set DB_ENGINE='postgres'
+DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite')
+if DB_ENGINE == 'postgres' and os.getenv('DB_NAME') and os.getenv('DB_USER'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }

@@ -1,25 +1,67 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
+from rest_framework.routers import DefaultRouter
 
-schema_view = get_schema_view(
-   openapi.Info(
-      title="Shepherd's Toolkit API",
-      default_version='v1',
-      description="Documentação da API bíblica e funcionalidades ministeriais",
-      contact=openapi.Contact(email="lcpires7.dev@gmail.com"),
-   ),
-   public=True,
-   permission_classes=[permissions.AllowAny],
+# Importar viewsets
+from apps.users.views import UserViewSet
+from apps.bible.views import (
+    BibleBookViewSet, BibleVerseViewSet, VerseHighlightViewSet,
+    VerseNoteViewSet, ReadingPlanViewSet
 )
+from apps.sermons.views import SermonViewSet, SermonTagViewSet
+from apps.goals.views import GoalViewSet, GoalTaskViewSet, GoalCommentViewSet
+from apps.events.views import EventViewSet
+from apps.members.views import MemberViewSet, PastoralVisitViewSet
+from apps.prayers.views import PrayerRequestViewSet
+from apps.finances.views import FinanceViewSet
+from apps.library.views import LibraryResourceViewSet, LibraryHighlightViewSet
+from apps.notifications.views import NotificationViewSet
+
+# Criar router
+router = DefaultRouter()
+
+# Registrar rotas
+router.register(r'users', UserViewSet, basename='user')
+
+# Bible routes
+router.register(r'bible/books', BibleBookViewSet, basename='bible-book')
+router.register(r'bible/verses', BibleVerseViewSet, basename='bible-verse')
+router.register(r'bible/highlights', VerseHighlightViewSet, basename='verse-highlight')
+router.register(r'bible/notes', VerseNoteViewSet, basename='verse-note')
+router.register(r'bible/reading-plans', ReadingPlanViewSet, basename='reading-plan')
+
+# Sermon routes
+router.register(r'sermons', SermonViewSet, basename='sermon')
+router.register(r'sermon-tags', SermonTagViewSet, basename='sermon-tag')
+
+# Goal routes
+router.register(r'goals', GoalViewSet, basename='goal')
+router.register(r'goal-tasks', GoalTaskViewSet, basename='goal-task')
+router.register(r'goal-comments', GoalCommentViewSet, basename='goal-comment')
+
+# Event routes
+router.register(r'events', EventViewSet, basename='event')
+
+# Member routes
+router.register(r'members', MemberViewSet, basename='member')
+router.register(r'pastoral-visits', PastoralVisitViewSet, basename='pastoral-visit')
+
+# Prayer routes
+router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayer-request')
+
+# Finance routes
+router.register(r'finances', FinanceViewSet, basename='finance')
+
+# Library routes
+router.register(r'library/resources', LibraryResourceViewSet, basename='library-resource')
+router.register(r'library/highlights', LibraryHighlightViewSet, basename='library-highlight')
+
+# Notification routes
+router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('core.urls')),
-    
-    # Documentação
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('api/', include(router.urls)),
+    path('api/auth/', include('rest_framework.urls')),
+    path('api/auth/token/', include('apps.users.auth_urls')),  # Para login/logout
 ]
