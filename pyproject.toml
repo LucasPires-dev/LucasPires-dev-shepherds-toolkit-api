@@ -17,6 +17,7 @@ drf-yasg = {extras = ["standard"], version = "^1.21.10"}
 django-cors-headers = "^4.7.0"
 gunicorn = "23.0.0"
 django-filter = "^25.2"
+requests = "^2.32.5"
 
 
 [build-system]

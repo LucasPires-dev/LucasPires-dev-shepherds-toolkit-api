@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate, get_user_model
 
 User = get_user_model()
 
@@ -71,3 +72,91 @@ class LogoutView(APIView):
     def post(self, request):
         request.user.auth_token.delete()
         return Response({'detail': 'Logout realizado com sucesso'}, status=status.HTTP_200_OK)
+
+    class RegisterView(APIView):
+        """Registro de novo usuário"""
+        permission_classes = [AllowAny]
+
+        def post(self, request):
+            serializer = UserRegistrationSerializer(data=request.data)
+
+            if serializer.is_valid():
+                user = serializer.save()
+                token, created = Token.objects.get_or_create(user=user)
+
+                return Response({
+                    'token': token.key,
+                    'user': UserSerializer(user).data
+                }, status=status.HTTP_201_CREATED)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginView(APIView):
+        """Login de usuário - usando email e password"""
+        permission_classes = [AllowAny]
+
+        def post(self, request):
+            email = request.data.get('email')
+            password = request.data.get('password')
+
+            # Validação de campos obrigatórios
+            if not email or not password:
+                return Response(
+                    {'error': 'Email e senha são obrigatórios'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Buscar usuário pelo email
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Credenciais inválidas'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # Autenticar (Django usa username internamente)
+            authenticated_user = authenticate(
+                username=user.username,
+                password=password
+            )
+
+            if authenticated_user is not None:
+                # Criar ou obter token
+                token, created = Token.objects.get_or_create(user=authenticated_user)
+
+                return Response({
+                    'token': token.key,
+                    'user': UserSerializer(authenticated_user).data
+                }, status=status.HTTP_200_OK)
+
+            return Response(
+                {'error': 'Credenciais inválidas'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+class LogoutView(APIView):
+        """Logout - deleta o token do usuário"""
+        permission_classes = [IsAuthenticated]
+
+        def post(self, request):
+            try:
+                # Deletar token do usuário
+                request.user.auth_token.delete()
+                return Response(
+                    {'message': 'Logout realizado com sucesso'},
+                    status=status.HTTP_200_OK
+                )
+            except Exception as e:
+                return Response(
+                    {'error': 'Erro ao realizar logout'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+class MeView(APIView):
+        """Retorna dados do usuário autenticado"""
+        permission_classes = [IsAuthenticated]
+
+        def get(self, request):
+            serializer = UserSerializer(request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)

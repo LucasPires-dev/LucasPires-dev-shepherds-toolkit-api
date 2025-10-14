@@ -2,6 +2,15 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate, get_user_model
+from .serializers import UserSerializer, UserRegistrationSerializer
+
+User = get_user_model()
 
 class User(AbstractUser):
     """Modelo customizado de usuário"""
@@ -28,4 +37,7 @@ class User(AbstractUser):
         verbose_name_plural = 'Usuários'
 
     def __str__(self):
-        return f"{self.get_full_name()} - {self.church_name}" if self.church_name else self.get_full_name()
+        return f"{self.get_full_name()} - {self.church_name}"
+
+
+
