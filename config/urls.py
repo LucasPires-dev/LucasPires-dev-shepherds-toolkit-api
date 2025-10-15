@@ -16,6 +16,9 @@ from apps.prayers.views import PrayerRequestViewSet
 from apps.finances.views import FinanceViewSet
 from apps.library.views import LibraryResourceViewSet, LibraryHighlightViewSet
 from apps.notifications.views import NotificationViewSet
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 
 # Criar router
 router = DefaultRouter()
@@ -62,6 +65,7 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('api/auth/', include('rest_framework.urls')),
+    #path('api/auth/', include('rest_framework.urls')),
+    path('api/auth/', include('apps.users.urls')),  # ← Adicionar esta linha
     path('api/auth/token/', include('apps.users.auth_urls')),  # Para login/logout
 ]

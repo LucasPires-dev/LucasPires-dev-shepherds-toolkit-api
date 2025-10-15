@@ -22,9 +22,21 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'password', 'password_confirm',
                   'first_name', 'last_name', 'church_name', 'ministry', 'role']
 
+    def validate_email(self, value):
+        """Verifica se o email já existe"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este email já está em uso")
+        return value
+
+    def validate_username(self, value):
+        """Verifica se o username já existe"""
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Este nome de usuário já está em uso")
+        return value
+
     def validate(self, data):
         if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError("As senhas não coincidem")
+            raise serializers.ValidationError({"password": "As senhas não coincidem"})
         return data
 
     def create(self, validated_data):
