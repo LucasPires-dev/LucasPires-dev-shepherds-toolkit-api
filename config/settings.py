@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-c#l#cgo0va@sd@vm7!c=b1m%(d0h7xkd44%%7ohrqd_ei%5*b(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['https://shepherds-toolkit-api-production.up.railway.app/']
 
 # Application definition
 
