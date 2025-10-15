@@ -75,11 +75,13 @@ class VerseHighlight(models.Model):
     color = models.CharField(max_length=20, choices=COLOR_CHOICES, blank=True, null=True)
     is_favorite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  # ← ADICIONE ESTA LINHA
 
     class Meta:
         db_table = 'verse_highlights'
         verbose_name = 'Marcação de Versículo'
         verbose_name_plural = 'Marcações de Versículos'
+        unique_together = ['user', 'verse']  # ← ADICIONE ESTA LINHA
 
     def __str__(self):
         return f"{self.user.username} - {self.verse.reference}"

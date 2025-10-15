@@ -22,14 +22,11 @@ class BibleVerseSerializer(serializers.ModelSerializer):
                   'text', 'version', 'reference', 'user_highlight']  # ← ADICIONADO
 
     def get_user_highlight(self, obj):
-        """Retorna os dados de marcação do usuário logado para este versículo"""
         request = self.context.get('request')
 
-        # Se não há usuário logado, retorna None
         if not request or not request.user.is_authenticated:
             return None
 
-        # Busca a marcação do usuário para este versículo
         highlight = VerseHighlight.objects.filter(
             user=request.user,
             verse=obj
@@ -41,6 +38,7 @@ class BibleVerseSerializer(serializers.ModelSerializer):
                 'color': highlight.color,
                 'is_favorite': highlight.is_favorite,
                 'created_at': highlight.created_at,
+                'updated_at': highlight.updated_at,  # ← Campo novo
             }
 
         return None
