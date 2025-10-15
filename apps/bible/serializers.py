@@ -14,11 +14,36 @@ class BibleBookSerializer(serializers.ModelSerializer):
 class BibleVerseSerializer(serializers.ModelSerializer):
     book_name = serializers.CharField(source='book.name', read_only=True)
     reference = serializers.CharField(read_only=True)
+    user_highlight = serializers.SerializerMethodField()  # ← NOVO
 
     class Meta:
         model = BibleVerse
         fields = ['id', 'book', 'book_name', 'chapter', 'verse',
-                  'text', 'version', 'reference']
+                  'text', 'version', 'reference', 'user_highlight']  # ← ADICIONADO
+
+    def get_user_highlight(self, obj):
+        """Retorna os dados de marcação do usuário logado para este versículo"""
+        request = self.context.get('request')
+
+        # Se não há usuário logado, retorna None
+        if not request or not request.user.is_authenticated:
+            return None
+
+        # Busca a marcação do usuário para este versículo
+        highlight = VerseHighlight.objects.filter(
+            user=request.user,
+            verse=obj
+        ).first()
+
+        if highlight:
+            return {
+                'id': str(highlight.id),
+                'color': highlight.color,
+                'is_favorite': highlight.is_favorite,
+                'created_at': highlight.created_at,
+            }
+
+        return None
 
 
 class VerseHighlightSerializer(serializers.ModelSerializer):

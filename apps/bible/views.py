@@ -10,6 +10,7 @@ from .serializers import (
     BibleBookSerializer, BibleVerseSerializer, VerseHighlightSerializer,
     VerseNoteSerializer, ReadingPlanSerializer, ReadingPlanProgressSerializer
 )
+from django.db.models import Prefetch
 
 
 class BibleBookViewSet(viewsets.ReadOnlyModelViewSet):
@@ -21,11 +22,24 @@ class BibleBookViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class BibleVerseViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = BibleVerse.objects.select_related('book')
     serializer_class = BibleVerseSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['book', 'chapter', 'version']
     search_fields = ['text']
+
+    def get_queryset(self):
+        """Otimizado com select_related e prefetch_related"""
+        queryset = BibleVerse.objects.select_related('book')
+
+        # Se o usuário estiver autenticado, prefetch suas marcações
+        if self.request.user.is_authenticated:
+            from django.db.models import Prefetch
+            highlights = VerseHighlight.objects.filter(user=self.request.user)
+            queryset = queryset.prefetch_related(
+                Prefetch('highlights', queryset=highlights)
+            )
+
+        return queryset
 
     @action(detail=False, methods=['get'])
     def by_reference(self, request):
