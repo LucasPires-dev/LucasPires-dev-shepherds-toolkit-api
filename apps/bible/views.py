@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -56,8 +56,27 @@ class VerseHighlightViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return VerseHighlight.objects.filter(user=self.request.user).select_related('verse', 'verse__book')
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescreve o create para usar update_or_create.
+        Se já existe marcação, atualiza. Se não existe, cria.
+        """
+        verse_id = request.data.get('verse')
+
+        # Busca ou cria a marcação
+        highlight, created = VerseHighlight.objects.update_or_create(
+            user=request.user,
+            verse_id=verse_id,
+            defaults={
+                'color': request.data.get('color'),
+                'is_favorite': request.data.get('is_favorite', False)
+            }
+        )
+
+        serializer = self.get_serializer(highlight)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+
+        return Response(serializer.data, status=status_code)
 
     @action(detail=False, methods=['get'])
     def favorites(self, request):
