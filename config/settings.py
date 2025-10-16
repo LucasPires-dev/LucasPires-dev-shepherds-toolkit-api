@@ -28,11 +28,9 @@ SECRET_KEY = 'django-insecure-c#l#cgo0va@sd@vm7!c=b1m%(d0h7xkd44%%7ohrqd_ei%5*b(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    'https://shepherds-toolkit-api-production.up.railway.app/',
-    '.railway.app',
-    'localhost',
-]
+
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
+
 
 # Application definition
 
@@ -135,21 +133,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -191,8 +174,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Use custom user model
 AUTH_USER_MODEL = 'users.User'
 
-# Database configuration: default to sqlite for local dev. To use Postgres set DB_ENGINE='postgres'
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite')
+
 if DB_ENGINE == 'postgres' and os.getenv('DB_NAME') and os.getenv('DB_USER'):
     DATABASES = {
         'default': {
@@ -201,7 +184,10 @@ if DB_ENGINE == 'postgres' and os.getenv('DB_NAME') and os.getenv('DB_USER'):
             'USER': os.getenv('DB_USER'),
             'PASSWORD': os.getenv('DB_PASSWORD'),
             'HOST': os.getenv('DB_HOST'),
-            'PORT': os.getenv('DB_PORT'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': 'require',  # ← necessário para Supabase
+            }
         }
     }
 else:
