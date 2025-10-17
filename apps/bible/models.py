@@ -67,6 +67,7 @@ class VerseHighlight(models.Model):
         ('blue', 'Azul'),
         ('pink', 'Rosa'),
         ('purple', 'Roxo'),
+        ('', "Nenhum")
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

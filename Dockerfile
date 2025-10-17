@@ -20,7 +20,8 @@ COPY pyproject.toml poetry.lock* README.md /app/
 
 # Instala dependências com poetry
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+    && poetry install --no-interaction --no-ansi --no-root \
+    &&  poetry run python manage.py populate_bible --source=api --bible-version=NVI \
 
 # Copia o restante do projeto
 COPY . /app/
