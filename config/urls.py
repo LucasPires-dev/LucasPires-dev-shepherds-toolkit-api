@@ -2,12 +2,22 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-# Importar viewsets
+# Importações existentes
 from apps.users.views import UserViewSet
 from apps.bible.views import (
-    BibleBookViewSet, BibleVerseViewSet, VerseHighlightViewSet,
-    VerseNoteViewSet, ReadingPlanViewSet
+    BibleBookViewSet, 
+    BibleVerseViewSet, 
+    VerseHighlightViewSet, 
+    VerseNoteViewSet
 )
+
+# ✅ NOVAS IMPORTAÇÕES para Reading Plan
+from apps.bible.reading_plan_views import (
+    ReadingPlanTemplateViewSet,
+    UserReadingPlanViewSet,
+    ReadingDayViewSet
+)
+
 from apps.sermons.views import SermonViewSet, SermonTagViewSet
 from apps.goals.views import GoalViewSet, GoalTaskViewSet, GoalCommentViewSet
 from apps.events.views import EventViewSet
@@ -16,14 +26,11 @@ from apps.prayers.views import PrayerRequestViewSet
 from apps.finances.views import FinanceViewSet
 from apps.library.views import LibraryResourceViewSet, LibraryHighlightViewSet
 from apps.notifications.views import NotificationViewSet
-from django.contrib import admin
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
 
 # Criar router
 router = DefaultRouter()
 
-# Registrar rotas
+# User routes
 router.register(r'users', UserViewSet, basename='user')
 
 # Bible routes
@@ -31,7 +38,10 @@ router.register(r'bible/books', BibleBookViewSet, basename='bible-book')
 router.register(r'bible/verses', BibleVerseViewSet, basename='bible-verse')
 router.register(r'bible/highlights', VerseHighlightViewSet, basename='verse-highlight')
 router.register(r'bible/notes', VerseNoteViewSet, basename='verse-note')
-router.register(r'bible/reading-plans', ReadingPlanViewSet, basename='reading-plan')
+
+router.register(r'reading-plans/templates', ReadingPlanTemplateViewSet, basename='reading-plan-template')
+router.register(r'reading-plans', UserReadingPlanViewSet, basename='reading-plan')
+router.register(r'reading-plans/readings', ReadingDayViewSet, basename='reading-day')
 
 # Sermon routes
 router.register(r'sermons', SermonViewSet, basename='sermon')
@@ -65,7 +75,6 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    #path('api/auth/', include('rest_framework.urls')),
-    path('api/auth/', include('apps.users.urls')),  # ← Adicionar esta linha
-    path('api/auth/token/', include('apps.users.auth_urls')),  # Para login/logout
+    path('api/auth/', include('apps.users.urls')),
+    path('api/auth/token/', include('apps.users.auth_urls')),
 ]

@@ -160,3 +160,109 @@ class ReadingPlanProgress(models.Model):
     def __str__(self):
         return f"{self.plan.name} - {self.book.name} {self.chapter}"
 
+
+# Adicione estes modelos ao arquivo apps/bible/models.py existente
+
+class ReadingPlanTemplate(models.Model):
+    """Templates de planos de leitura predefinidos"""
+
+    PLAN_TYPE_CHOICES = [
+        ('bible_year', 'Bíblia em 1 Ano'),
+        ('nt_90days', 'Novo Testamento em 90 Dias'),
+        ('psalms_month', 'Salmos em 1 Mês'),
+        ('custom', 'Personalizado'),
+    ]
+
+    id = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    plan_type = models.CharField(max_length=50, choices=PLAN_TYPE_CHOICES)
+    duration_days = models.IntegerField()
+    icon = models.CharField(max_length=10, default='📖')
+    color = models.CharField(max_length=50, default='from-blue-500 to-blue-600')
+    readings_count = models.IntegerField()
+    readings_data = models.JSONField(default=list)  # Lista de leituras diárias
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'reading_plan_templates'
+        verbose_name = 'Template de Plano'
+        verbose_name_plural = 'Templates de Planos'
+
+    def __str__(self):
+        return self.name
+
+
+class UserReadingPlan(models.Model):
+    """Planos de leitura dos usuários"""
+
+    STATUS_CHOICES = [
+        ('active', 'Ativo'),
+        ('completed', 'Concluído'),
+        ('paused', 'Pausado'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_reading_plans')
+    template = models.ForeignKey(ReadingPlanTemplate, on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    plan_type = models.CharField(max_length=50)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    total_days = models.IntegerField()
+    is_active = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'user_reading_plans'
+        verbose_name = 'Plano de Leitura do Usuário'
+        verbose_name_plural = 'Planos de Leitura dos Usuários'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.name}"
+
+    @property
+    def days_completed(self):
+        return self.reading_days.filter(status='completed').count()
+
+    @property
+    def progress_percentage(self):
+        if self.total_days == 0:
+            return 0
+        return round((self.days_completed / self.total_days) * 100, 1)
+
+
+class ReadingDay(models.Model):
+    """Dias de leitura individuais"""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('completed', 'Concluída'),
+        ('skipped', 'Pulada'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan = models.ForeignKey(UserReadingPlan, on_delete=models.CASCADE, related_name='reading_days')
+    date = models.DateField()
+    day_number = models.IntegerField()
+    readings_data = models.JSONField()  # Lista de referências bíblicas
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'reading_days'
+        verbose_name = 'Dia de Leitura'
+        verbose_name_plural = 'Dias de Leitura'
+        ordering = ['date']
+        unique_together = ['plan', 'date']
+
+    def __str__(self):
+        return f"{self.plan.name} - Dia {self.day_number}"

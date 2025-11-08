@@ -3,6 +3,7 @@ from .models import (
     BibleBook, BibleVerse, VerseHighlight, VerseNote,
     ReadingPlan, ReadingPlanProgress
 )
+from .models import ReadingPlanTemplate, UserReadingPlan, ReadingDay
 
 @admin.register(BibleBook)
 class BibleBookAdmin(admin.ModelAdmin):
@@ -46,3 +47,27 @@ class ReadingPlanProgressAdmin(admin.ModelAdmin):
     list_display = ['plan', 'book', 'chapter', 'is_completed', 'completed_at']
     list_filter = ['is_completed', 'completed_at']
     search_fields = ['plan__name', 'book__name']
+
+
+@admin.register(ReadingPlanTemplate)
+class ReadingPlanTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'plan_type', 'duration_days', 'readings_count', 'is_active']
+    list_filter = ['plan_type', 'is_active']
+    search_fields = ['name', 'description']
+
+
+@admin.register(UserReadingPlan)
+class UserReadingPlanAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'plan_type', 'start_date', 'end_date',
+                    'progress_percentage', 'is_active', 'status']
+    list_filter = ['plan_type', 'is_active', 'status', 'created_at']
+    search_fields = ['name', 'user__username']
+    date_hierarchy = 'start_date'
+
+
+@admin.register(ReadingDay)
+class ReadingDayAdmin(admin.ModelAdmin):
+    list_display = ['plan', 'date', 'day_number', 'status', 'completed_at']
+    list_filter = ['status', 'date']
+    search_fields = ['plan__name', 'plan__user__username']
+    date_hierarchy = 'date'
