@@ -1,3 +1,5 @@
+# apps/bible/reading_plan_serializers.py
+
 from rest_framework import serializers
 from .models import ReadingPlanTemplate, UserReadingPlan, ReadingDay
 from datetime import timedelta
@@ -69,13 +71,23 @@ class CreateReadingPlanSerializer(serializers.Serializer):
                 readings_data = template.readings_data
                 total_days = template.duration_days
                 plan_type = template.plan_type
+                description = template.description
             except ReadingPlanTemplate.DoesNotExist:
-                raise serializers.ValidationError("Template não encontrado")
+                raise serializers.ValidationError(
+                    {"template_id": "Template não encontrado"}
+                )
         else:
             # Plano customizado
             readings_data = validated_data.get('custom_readings', [])
             total_days = len(readings_data)
             plan_type = 'custom'
+            description = ''
+
+        # Validar readings_data
+        if not readings_data or not isinstance(readings_data, list):
+            raise serializers.ValidationError(
+                {"readings_data": "Dados de leitura inválidos"}
+            )
 
         # Calcular data de término
         end_date = start_date + timedelta(days=total_days - 1)
@@ -85,12 +97,13 @@ class CreateReadingPlanSerializer(serializers.Serializer):
             user=user,
             template=template,
             name=name,
-            description=template.description if template else '',
+            description=description,
             plan_type=plan_type,
             start_date=start_date,
             end_date=end_date,
             total_days=total_days,
-            is_active=True
+            is_active=True,
+            status='active'
         )
 
         # Criar dias de leitura
@@ -100,7 +113,8 @@ class CreateReadingPlanSerializer(serializers.Serializer):
                 plan=plan,
                 date=current_date,
                 day_number=day_num,
-                readings_data=reading
+                readings_data=reading,
+                status='pending'
             )
             current_date += timedelta(days=1)
 
@@ -118,8 +132,9 @@ class UpdateReadingStatusSerializer(serializers.Serializer):
 
         if validated_data['status'] == 'completed':
             from django.utils import timezone
-            instance.completed_at = timezone.now()
-        elif instance.completed_at:
+            if not instance.completed_at:
+                instance.completed_at = timezone.now()
+        else:
             instance.completed_at = None
 
         instance.save()

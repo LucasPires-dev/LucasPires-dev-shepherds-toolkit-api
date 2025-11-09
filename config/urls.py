@@ -11,7 +11,7 @@ from apps.bible.views import (
     VerseNoteViewSet
 )
 
-# ✅ NOVAS IMPORTAÇÕES para Reading Plan
+# Reading Plan imports
 from apps.bible.reading_plan_views import (
     ReadingPlanTemplateViewSet,
     UserReadingPlanViewSet,
@@ -27,7 +27,7 @@ from apps.finances.views import FinanceViewSet
 from apps.library.views import LibraryResourceViewSet, LibraryHighlightViewSet
 from apps.notifications.views import NotificationViewSet
 
-# Criar router
+# Criar router principal
 router = DefaultRouter()
 
 # User routes
@@ -39,9 +39,14 @@ router.register(r'bible/verses', BibleVerseViewSet, basename='bible-verse')
 router.register(r'bible/highlights', VerseHighlightViewSet, basename='verse-highlight')
 router.register(r'bible/notes', VerseNoteViewSet, basename='verse-note')
 
+# ✅ CORREÇÃO: Reading Plan routes (ordem correta - mais específico primeiro)
+# Templates primeiro (read-only)
 router.register(r'reading-plans/templates', ReadingPlanTemplateViewSet, basename='reading-plan-template')
+# Depois os user plans
 router.register(r'reading-plans', UserReadingPlanViewSet, basename='reading-plan')
-router.register(r'reading-plans/readings', ReadingDayViewSet, basename='reading-day')
+
+# ⚠️ IMPORTANTE: Não registre ReadingDayViewSet no router principal
+# Ele será acessado através de actions na UserReadingPlanViewSet ou via endpoints específicos
 
 # Sermon routes
 router.register(r'sermons', SermonViewSet, basename='sermon')
@@ -72,9 +77,15 @@ router.register(r'library/highlights', LibraryHighlightViewSet, basename='librar
 # Notification routes
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
+# ✅ Router separado para Reading Days (se necessário acesso direto)
+reading_days_router = DefaultRouter()
+reading_days_router.register(r'', ReadingDayViewSet, basename='reading-day')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('apps.users.urls')),
     path('api/auth/token/', include('apps.users.auth_urls')),
+    # ✅ Endpoint separado para reading days se necessário
+    path('api/reading-days/', include(reading_days_router.urls)),
 ]

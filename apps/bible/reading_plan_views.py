@@ -29,9 +29,16 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # ✅ CORREÇÃO: Use self.request ao invés de self.context['request']
         return UserReadingPlan.objects.filter(
-            user=self.context['request'].user
+            user=self.request.user
         ).prefetch_related('reading_days')
+
+    def get_serializer_context(self):
+        """Adiciona o request ao context do serializer"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     @action(detail=False, methods=['get'], url_path='templates')
     def get_templates(self, request):
@@ -88,8 +95,14 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
 
         if month:
             # Formato: YYYY-MM
-            year, month_num = map(int, month.split('-'))
-            readings = readings.filter(date__year=year, date__month=month_num)
+            try:
+                year, month_num = map(int, month.split('-'))
+                readings = readings.filter(date__year=year, date__month=month_num)
+            except (ValueError, AttributeError):
+                return Response(
+                    {'detail': 'Formato de mês inválido. Use YYYY-MM'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         readings = readings.order_by('-date')
         serializer = ReadingDaySerializer(readings, many=True)
@@ -172,9 +185,10 @@ class ReadingDayViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # ✅ CORREÇÃO: Use self.request ao invés de self.context['request']
         return ReadingDay.objects.filter(
-            plan__user=self.context['request'].user
-        )
+            plan__user=self.request.user
+        ).select_related('plan')
 
     def partial_update(self, request, pk=None):
         """Atualiza status da leitura"""
