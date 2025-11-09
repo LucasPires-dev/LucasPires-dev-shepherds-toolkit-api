@@ -28,12 +28,11 @@ class BibleVerseViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['text']
 
     def get_queryset(self):
-        """Otimizado com select_related e prefetch_related"""
         queryset = BibleVerse.objects.select_related('book')
 
-        # Se o usuário estiver autenticado, prefetch suas marcações
         if self.request.user.is_authenticated:
             from django.db.models import Prefetch
+            from .models import VerseHighlight
             highlights = VerseHighlight.objects.filter(user=self.request.user)
             queryset = queryset.prefetch_related(
                 Prefetch('highlights', queryset=highlights)
@@ -41,14 +40,104 @@ class BibleVerseViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset
 
+    def list(self, request, *args, **kwargs):
+        """
+        ✅ MODIFICADO: Adiciona navegação de capítulos na resposta
+        """
+        response = super().list(request, *args, **kwargs)
+
+        # Verificar se está buscando um capítulo específico
+        book_abbrev = request.query_params.get('book')
+        chapter = request.query_params.get('chapter')
+        version = request.query_params.get('version', 'ACF')
+
+        if book_abbrev and chapter:
+            try:
+                chapter = int(chapter)
+                book = BibleBook.objects.get(abbrev=book_abbrev)
+
+                # Adicionar navegação à resposta
+                navigation = self._get_chapter_navigation(book, chapter, version)
+                response.data['chapter_navigation'] = navigation
+
+            except (BibleBook.DoesNotExist, ValueError):
+                pass
+
+        return response
+
+    def _get_chapter_navigation(self, book, chapter, version):
+        """Gera informações de navegação entre capítulos"""
+
+        # Buscar livros anterior e próximo
+        previous_book = BibleBook.objects.filter(
+            book_order=book.book_order - 1
+        ).first()
+
+        next_book = BibleBook.objects.filter(
+            book_order=book.book_order + 1
+        ).first()
+
+        navigation = {
+            'current': {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter,
+                'total_chapters': book.total_chapters,
+                'testament': book.testament
+            },
+            'previous': None,
+            'next': None,
+            'book_chapters': {
+                'first': 1,
+                'last': book.total_chapters,
+                'current': chapter
+            }
+        }
+
+        # Capítulo anterior
+        if chapter > 1:
+            navigation['previous'] = {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter - 1,
+                'is_same_book': True,
+                'url': f'/api/bible/verses/?book={book.abbrev}&chapter={chapter - 1}&version={version}'
+            }
+        elif previous_book:
+            navigation['previous'] = {
+                'book': previous_book.abbrev,
+                'book_name': previous_book.name,
+                'chapter': previous_book.total_chapters,
+                'is_same_book': False,
+                'url': f'/api/bible/verses/?book={previous_book.abbrev}&chapter={previous_book.total_chapters}&version={version}'
+            }
+
+        # Próximo capítulo
+        if chapter < book.total_chapters:
+            navigation['next'] = {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter + 1,
+                'is_same_book': True,
+                'url': f'/api/bible/verses/?book={book.abbrev}&chapter={chapter + 1}&version={version}'
+            }
+        elif next_book:
+            navigation['next'] = {
+                'book': next_book.abbrev,
+                'book_name': next_book.name,
+                'chapter': 1,
+                'is_same_book': False,
+                'url': f'/api/bible/verses/?book={next_book.abbrev}&chapter=1&version={version}'
+            }
+
+        return navigation
+
     @action(detail=False, methods=['get'])
     def by_reference(self, request):
         """Busca versículos por referência (ex: João 3:16)"""
         reference = request.query_params.get('reference')
-        # Implementar lógica de parsing de referência
-        # Ex: "João 3:16" -> book="João", chapter=3, verse=16
+        # TODO: Implementar parsing de referência
         return Response({'detail': 'Implementar parsing de referência'})
-
 
 class VerseHighlightViewSet(viewsets.ModelViewSet):
     serializer_class = VerseHighlightSerializer

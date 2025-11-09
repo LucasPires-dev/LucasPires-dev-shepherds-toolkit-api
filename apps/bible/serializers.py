@@ -14,19 +14,22 @@ class BibleBookSerializer(serializers.ModelSerializer):
 class BibleVerseSerializer(serializers.ModelSerializer):
     book_name = serializers.CharField(source='book.name', read_only=True)
     reference = serializers.CharField(read_only=True)
-    user_highlight = serializers.SerializerMethodField()  # ← NOVO
+    user_highlight = serializers.SerializerMethodField()
+
+    # ✅ NOVOS CAMPOS DE NAVEGAÇÃO
+    navigation = serializers.SerializerMethodField()
 
     class Meta:
         model = BibleVerse
         fields = ['id', 'book', 'book_name', 'chapter', 'verse',
-                  'text', 'version', 'reference', 'user_highlight']  # ← ADICIONADO
+                  'text', 'version', 'reference', 'user_highlight', 'navigation']
 
     def get_user_highlight(self, obj):
         request = self.context.get('request')
-
         if not request or not request.user.is_authenticated:
             return None
 
+        from .models import VerseHighlight
         highlight = VerseHighlight.objects.filter(
             user=request.user,
             verse=obj
@@ -38,11 +41,92 @@ class BibleVerseSerializer(serializers.ModelSerializer):
                 'color': highlight.color,
                 'is_favorite': highlight.is_favorite,
                 'created_at': highlight.created_at,
-                'updated_at': highlight.updated_at,  # ← Campo novo
+                'updated_at': highlight.updated_at,
             }
-
         return None
 
+    def get_navigation(self, obj):
+        """
+        Retorna links de navegação para capítulos anterior/próximo
+        Incluído apenas no PRIMEIRO versículo de cada capítulo
+        """
+        # Só adicionar navegação no primeiro versículo
+        if obj.verse != 1:
+            return None
+
+        book = obj.book
+        chapter = obj.chapter
+        version = obj.version
+
+        # Buscar informações do livro anterior e próximo
+        previous_book = BibleBook.objects.filter(
+            book_order=book.book_order - 1
+        ).first()
+
+        next_book = BibleBook.objects.filter(
+            book_order=book.book_order + 1
+        ).first()
+
+        navigation = {
+            'current': {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter,
+                'total_chapters': book.total_chapters
+            },
+            'previous': None,
+            'next': None
+        }
+
+        # Capítulo anterior
+        if chapter > 1:
+            # Capítulo anterior no mesmo livro
+            navigation['previous'] = {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter - 1,
+                'is_same_book': True
+            }
+        elif previous_book:
+            # Último capítulo do livro anterior
+            navigation['previous'] = {
+                'book': previous_book.abbrev,
+                'book_name': previous_book.name,
+                'chapter': previous_book.total_chapters,
+                'is_same_book': False
+            }
+
+        # Próximo capítulo
+        if chapter < book.total_chapters:
+            # Próximo capítulo no mesmo livro
+            navigation['next'] = {
+                'book': book.abbrev,
+                'book_name': book.name,
+                'chapter': chapter + 1,
+                'is_same_book': True
+            }
+        elif next_book:
+            # Primeiro capítulo do próximo livro
+            navigation['next'] = {
+                'book': next_book.abbrev,
+                'book_name': next_book.name,
+                'chapter': 1,
+                'is_same_book': False
+            }
+
+        return navigation
+
+
+# ✅ NOVO SERIALIZER ESPECÍFICO PARA RESPOSTA DE CAPÍTULO
+class ChapterResponseSerializer(serializers.Serializer):
+    """Serializer para resposta completa de um capítulo"""
+    count = serializers.IntegerField()
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = BibleVerseSerializer(many=True)
+
+    # Navegação de capítulo
+    chapter_navigation = serializers.DictField()
 
 class VerseHighlightSerializer(serializers.ModelSerializer):
     verse_reference = serializers.CharField(source='verse.reference', read_only=True)
