@@ -86,6 +86,7 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """Retorna histórico de leituras - TODOS os dias"""
         plan = self.get_object()
