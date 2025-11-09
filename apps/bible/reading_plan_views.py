@@ -89,25 +89,27 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """Retorna histórico de leituras - TODOS os dias"""
-        plan = self.get_object()
-        month = request.query_params.get('month')
 
-        # ✅ CORREÇÃO: Retornar TODOS os dias (não só completed/skipped)
-        readings = plan.reading_days.all()  # ← MUDANÇA AQUI
+        def history(self, request, pk=None):
+            """Retorna histórico de leituras - TODOS os dias"""
+            plan = self.get_object()
+            month = request.query_params.get('month')
 
-        if month:
-            try:
-                year, month_num = map(int, month.split('-'))
-                readings = readings.filter(date__year=year, date__month=month_num)
-            except (ValueError, AttributeError):
-                return Response(
-                    {'detail': 'Formato de mês inválido. Use YYYY-MM'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            readings = plan.reading_days.all()
 
-        readings = readings.order_by('date')  # Ordem cronológica
-        serializer = ReadingDaySerializer(readings, many=True)
-        return Response(serializer.data)
+            if month:
+                try:
+                    year, month_num = map(int, month.split('-'))
+                    readings = readings.filter(date__year=year, date__month=month_num)
+                except (ValueError, AttributeError):
+                    return Response(
+                        {'detail': 'Formato de mês inválido. Use YYYY-MM'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            readings = readings.order_by('date')
+            serializer = ReadingDaySerializer(readings, many=True)
+            return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
