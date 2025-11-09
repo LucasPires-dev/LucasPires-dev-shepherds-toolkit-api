@@ -1,3 +1,5 @@
+# apps/bible/reading_plan_views.py - VERSÃO CORRIGIDA
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -29,7 +31,6 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # ✅ CORREÇÃO: Use self.request ao invés de self.context['request']
         return UserReadingPlan.objects.filter(
             user=self.request.user
         ).prefetch_related('reading_days')
@@ -39,13 +40,6 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
-
-    @action(detail=False, methods=['get'], url_path='templates')
-    def get_templates(self, request):
-        """Lista templates disponíveis"""
-        templates = ReadingPlanTemplate.objects.filter(is_active=True)
-        serializer = ReadingPlanTemplateSerializer(templates, many=True)
-        return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='my-plans')
     def my_plans(self, request):
@@ -86,30 +80,52 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
-    @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
-        """Retorna histórico de leituras - TODOS os dias"""
+        """
+        ✅ CORRIGIDO: Retorna histórico de leituras
+        Aceita parâmetro 'month' no formato YYYY-MM
+        """
+        plan = self.get_object()
+        month = request.query_params.get('month')
 
-        def history(self, request, pk=None):
-            """Retorna histórico de leituras - TODOS os dias"""
-            plan = self.get_object()
-            month = request.query_params.get('month')
+        # Começar com todas as leituras
+        readings = plan.reading_days.all()
 
-            readings = plan.reading_days.all()
-
-            if month:
-                try:
-                    year, month_num = map(int, month.split('-'))
-                    readings = readings.filter(date__year=year, date__month=month_num)
-                except (ValueError, AttributeError):
+        # Filtrar por mês se fornecido
+        if month:
+            try:
+                # Validar formato YYYY-MM
+                if len(month) != 7 or month[4] != '-':
                     return Response(
-                        {'detail': 'Formato de mês inválido. Use YYYY-MM'},
+                        {'detail': 'Formato de mês inválido. Use YYYY-MM (ex: 2025-11)'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-            readings = readings.order_by('date')
-            serializer = ReadingDaySerializer(readings, many=True)
-            return Response(serializer.data)
+                year, month_num = map(int, month.split('-'))
+
+                # Validar valores
+                if not (1 <= month_num <= 12):
+                    return Response(
+                        {'detail': 'Mês deve estar entre 01 e 12'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                readings = readings.filter(date__year=year, date__month=month_num)
+
+            except (ValueError, AttributeError) as e:
+                return Response(
+                    {'detail': f'Formato de mês inválido. Use YYYY-MM. Erro: {str(e)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Ordenar por data
+        readings = readings.order_by('date')
+
+        # Serializar
+        serializer = ReadingDaySerializer(readings, many=True)
+
+        # Retornar array direto (não objeto com results)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
@@ -188,7 +204,6 @@ class ReadingDayViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # ✅ CORREÇÃO: Use self.request ao invés de self.context['request']
         return ReadingDay.objects.filter(
             plan__user=self.request.user
         ).select_related('plan')
