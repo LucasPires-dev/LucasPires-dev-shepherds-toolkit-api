@@ -1,4 +1,4 @@
-# apps/bible/reading_plan_views.py - VERSÃO CORRIGIDA
+# apps/bible/reading_plan_views.py - VERSÃO CORRIGIDA PARA MOSTRAR TODOS OS DIAS
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -82,16 +82,16 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """
-        ✅ CORRIGIDO: Retorna histórico de leituras
+        ✅ CORRIGIDO: Retorna TODAS as leituras do plano, opcionalmente filtradas por mês
         Aceita parâmetro 'month' no formato YYYY-MM
         """
         plan = self.get_object()
         month = request.query_params.get('month')
 
-        # Começar com todas as leituras
+        # ✅ CORREÇÃO: Começar com TODAS as leituras do plano
         readings = plan.reading_days.all()
 
-        # Filtrar por mês se fornecido
+        # Filtrar por mês se fornecido (para exibição do calendário)
         if month:
             try:
                 # Validar formato YYYY-MM
@@ -110,6 +110,8 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
+                # ✅ IMPORTANTE: Filtrar por ano e mês, mas incluir TODOS os status
+                # Isso garante que dias pendentes também apareçam
                 readings = readings.filter(date__year=year, date__month=month_num)
 
             except (ValueError, AttributeError) as e:
@@ -123,6 +125,9 @@ class UserReadingPlanViewSet(viewsets.ModelViewSet):
 
         # Serializar
         serializer = ReadingDaySerializer(readings, many=True)
+
+        # ✅ DEBUG: Log para verificar quantos dias estão sendo retornados
+        print(f"📅 Retornando {len(serializer.data)} dias de leitura para o mês {month}")
 
         # Retornar array direto (não objeto com results)
         return Response(serializer.data)
