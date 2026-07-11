@@ -10,7 +10,13 @@ from .serializers import (
     BibleBookSerializer, BibleVerseSerializer, VerseHighlightSerializer,
     VerseNoteSerializer, ReadingPlanSerializer, ReadingPlanProgressSerializer
 )
+from .reference_parser import parse_reference, format_reference
 from django.db.models import Prefetch
+
+
+def _truncate(text, length):
+    text = text.strip()
+    return text if len(text) <= length else text[:length].rsplit(' ', 1)[0] + '…'
 
 
 class BibleBookViewSet(viewsets.ReadOnlyModelViewSet):
@@ -134,10 +140,71 @@ class BibleVerseViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def by_reference(self, request):
-        """Busca versículos por referência (ex: João 3:16)"""
-        reference = request.query_params.get('reference')
-        # TODO: Implementar parsing de referência
-        return Response({'detail': 'Implementar parsing de referência'})
+        """Busca versículos por referência solta em pt-BR (ex: 'jo 3:16', 'salmos 23').
+
+        Usado pelo autocomplete de citação bíblica do editor de sermões.
+        Como o nome do livro pode ser ambíguo (ex: 'cor' -> 1 ou 2 Coríntios),
+        retorna um candidato por livro compatível, não só o primeiro achado.
+        """
+        query = request.query_params.get('q', '').strip()
+        version = request.query_params.get('version', 'ACF')
+
+        if not query:
+            return Response({'query': query, 'results': []})
+
+        parsed = parse_reference(query)
+        if not parsed:
+            return Response({'query': query, 'results': []})
+
+        results = []
+        for abbrev in parsed.book_abbrevs:
+            book = BibleBook.objects.filter(abbrev=abbrev).first()
+            if not book or parsed.chapter > book.total_chapters:
+                continue
+
+            chapter_verses = BibleVerse.objects.filter(
+                book=book, chapter=parsed.chapter, version=version
+            ).order_by('verse')
+
+            if parsed.verse_start:
+                verses = list(chapter_verses.filter(
+                    verse__gte=parsed.verse_start, verse__lte=parsed.verse_end
+                ))
+                if not verses:
+                    continue
+                text = ' '.join(v.text for v in verses)
+                results.append({
+                    'book_abbrev': book.abbrev,
+                    'book_name': book.name,
+                    'chapter': parsed.chapter,
+                    'verse_start': parsed.verse_start,
+                    'verse_end': parsed.verse_end,
+                    'reference': format_reference(book.name, parsed.chapter, parsed.verse_start, parsed.verse_end),
+                    'version': version,
+                    'preview': _truncate(text, 90),
+                    'text': text,
+                    'verse_ids': [v.id for v in verses],
+                })
+            else:
+                first_verse = chapter_verses.first()
+                if not first_verse:
+                    continue
+                total_verses = chapter_verses.count()
+                results.append({
+                    'book_abbrev': book.abbrev,
+                    'book_name': book.name,
+                    'chapter': parsed.chapter,
+                    'verse_start': 1,
+                    'verse_end': total_verses,
+                    'reference': format_reference(book.name, parsed.chapter, None, None),
+                    'version': version,
+                    'preview': _truncate(first_verse.text, 90),
+                    'text': None,
+                    'verse_ids': None,
+                    'verse_count': total_verses,
+                })
+
+        return Response({'query': query, 'results': results[:8]})
 
 class VerseHighlightViewSet(viewsets.ModelViewSet):
     serializer_class = VerseHighlightSerializer

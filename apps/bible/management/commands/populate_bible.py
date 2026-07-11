@@ -4,6 +4,13 @@ import json
 import requests
 from pathlib import Path
 
+# O 'abbrev' usado nos JSONs fonte (thiagobodruk/bible) nem sempre bate com
+# o BibleBook.abbrev cadastrado em populate_books(). Único caso divergente
+# hoje: Atos vem como "atos" no JSON, mas o livro está cadastrado como "At".
+JSON_ABBREV_OVERRIDES = {
+    'atos': 'At',
+}
+
 
 class Command(BaseCommand):
     help = 'Popula o banco de dados com livros e versículos da Bíblia'
@@ -229,13 +236,14 @@ class Command(BaseCommand):
             self.stdout.write(f'   📊 Total de versículos a processar: {total_verses}')
 
             for book_data in data:
-                book_name = book_data.get('name')
+                book_abbrev = book_data.get('abbrev', '')
+                book_abbrev = JSON_ABBREV_OVERRIDES.get(book_abbrev, book_abbrev)
 
                 try:
-                    book = BibleBook.objects.get(name=book_name)
+                    book = BibleBook.objects.get(abbrev__iexact=book_abbrev)
                 except BibleBook.DoesNotExist:
                     self.stdout.write(
-                        self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_name}')
+                        self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_abbrev}')
                     )
                     continue
 
@@ -296,13 +304,14 @@ class Command(BaseCommand):
             self.stdout.write(f'   📊 Total de livros a processar: {total_books}')
 
             for book_data in data:
-                book_name = book_data.get('name')
+                book_abbrev = book_data.get('abbrev', '')
+                book_abbrev = JSON_ABBREV_OVERRIDES.get(book_abbrev, book_abbrev)
 
                 try:
-                    book = BibleBook.objects.get(name=book_name)
+                    book = BibleBook.objects.get(abbrev__iexact=book_abbrev)
                 except BibleBook.DoesNotExist:
                     self.stdout.write(
-                        self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_name}')
+                        self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_abbrev}')
                     )
                     continue
 
