@@ -4,11 +4,11 @@ import json
 import requests
 from pathlib import Path
 
-# O 'abbrev' usado nos JSONs fonte (thiagobodruk/bible) nem sempre bate com
-# o BibleBook.abbrev cadastrado em populate_books(). Único caso divergente
-# hoje: Atos vem como "atos" no JSON, mas o livro está cadastrado como "At".
+# O 'abbrev' usado nos JSONs fonte (thiagobodruk/bible, damarals/biblias) nem
+# sempre bate com o BibleBook.abbrev cadastrado em populate_books().
 JSON_ABBREV_OVERRIDES = {
-    'atos': 'At',
+    'atos': 'At',   # thiagobodruk/bible: "atos" -> cadastrado como "At"
+    'Êx': 'Ex',     # damarals/biblias (ALM1911): "Êx" com acento -> cadastrado como "Ex"
 }
 
 
@@ -46,12 +46,27 @@ class Command(BaseCommand):
             help='Limpa dados existentes antes de popular'
         )
 
+        parser.add_argument(
+            '--match-by',
+            type=str,
+            default='abbrev',
+            choices=['abbrev', 'position'],
+            dest='match_by',
+            help=(
+                'Como casar os livros do JSON com o BibleBook cadastrado: '
+                '"abbrev" (padrão, usa JSON_ABBREV_OVERRIDES) ou "position" '
+                '(usa a ordem dos livros no array, útil para fontes em outros '
+                'idiomas cujas abreviações não batem com o português)'
+            ),
+        )
+
     def handle(self, *args, **options):
         """Método principal que executa o comando"""
 
         source = options['source']
         version = options['bible_version']  # Mudou de 'version' para 'bible_version'
         clear_data = options['clear']
+        match_by = options['match_by']
 
         self.stdout.write(self.style.SUCCESS('=' * 70))
         self.stdout.write(self.style.SUCCESS('🙏 INICIANDO POPULAÇÃO DA BÍBLIA'))
@@ -69,7 +84,7 @@ class Command(BaseCommand):
         self.stdout.write('\n📖 Populando versículos...')
         if source == 'json':
             file_path = options['file']
-            self.populate_verses_from_json(file_path, version)
+            self.populate_verses_from_json(file_path, version, match_by)
         else:
             self.populate_verses_from_api(version)
 
@@ -202,7 +217,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(f'\n   📚 {created_count} livros criados com sucesso!')
         )
 
-    def populate_verses_from_json(self, file_path, version):
+    def populate_verses_from_json(self, file_path, version, match_by='abbrev'):
         """Popula versículos a partir de arquivo JSON"""
 
         try:
@@ -235,17 +250,26 @@ class Command(BaseCommand):
 
             self.stdout.write(f'   📊 Total de versículos a processar: {total_verses}')
 
-            for book_data in data:
-                book_abbrev = book_data.get('abbrev', '')
-                book_abbrev = JSON_ABBREV_OVERRIDES.get(book_abbrev, book_abbrev)
+            for position, book_data in enumerate(data, start=1):
+                if match_by == 'position':
+                    try:
+                        book = BibleBook.objects.get(book_order=position)
+                    except BibleBook.DoesNotExist:
+                        self.stdout.write(
+                            self.style.WARNING(f'   ⚠️  Nenhum livro cadastrado com book_order={position}')
+                        )
+                        continue
+                else:
+                    book_abbrev = book_data.get('abbrev', '')
+                    book_abbrev = JSON_ABBREV_OVERRIDES.get(book_abbrev, book_abbrev)
 
-                try:
-                    book = BibleBook.objects.get(abbrev__iexact=book_abbrev)
-                except BibleBook.DoesNotExist:
-                    self.stdout.write(
-                        self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_abbrev}')
-                    )
-                    continue
+                    try:
+                        book = BibleBook.objects.get(abbrev__iexact=book_abbrev)
+                    except BibleBook.DoesNotExist:
+                        self.stdout.write(
+                            self.style.WARNING(f'   ⚠️  Livro não encontrado: {book_abbrev}')
+                        )
+                        continue
 
                 for chapter_num, chapter_verses in enumerate(book_data.get('chapters', []), start=1):
                     for verse_num, verse_text in enumerate(chapter_verses, start=1):

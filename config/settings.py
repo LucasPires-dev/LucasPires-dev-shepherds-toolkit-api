@@ -23,10 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c#l#cgo0va@sd@vm7!c=b1m%(d0h7xkd44%%7ohrqd_ei%5*b('
+# Em produção (Railway), defina SECRET_KEY como variável de ambiente com um
+# valor gerado — este default só vale para desenvolvimento local.
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-c#l#cgo0va@sd@vm7!c=b1m%(d0h7xkd44%%7ohrqd_ei%5*b(')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Em produção, defina DEBUG=False como variável de ambiente.
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
@@ -51,12 +54,13 @@ INSTALLED_APPS = [
     # Local apps
     'apps.users',
     'apps.bible',
-    'apps.sermons',
+    'apps.writings',
     'apps.goals',
     'apps.events',
     'apps.members',
     'apps.prayers',
     'apps.finances',
+    'apps.investments',
     'apps.library',
     'apps.ai',
     'apps.notifications',
@@ -78,8 +82,10 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
     "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Vite dev server (fallback port)
+    "http://127.0.0.1:5174",
     "http://localhost:3000",
-]
+] + [origin.strip() for origin in os.getenv('EXTRA_CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
 
 # Ou permitir todas as origens (APENAS PARA DESENVOLVIMENTO!)
 # CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ NÃO USE EM PRODUÇÃO!
@@ -100,19 +106,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# ===== CONFIGURAÇÕES DO REST FRAMEWORK =====
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
-
-    ],
-    #'DEFAULT_PERMISSION_CLASSES': [
-    #    'rest_framework.permissions.IsAuthenticated',
-    #],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 170,
-}
 
 ROOT_URLCONF = 'config.urls'
 
@@ -214,4 +207,45 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'ai': '10/minute',
+    },
 }
+
+# ===== api.bible (Bíblias com copyright, servidas ao vivo, nunca armazenadas
+# permanentemente — conforme os termos de uso da api.bible) =====
+API_BIBLE_KEY = os.getenv('API_BIBLE_KEY', '')
+EXTERNAL_BIBLE_IDS = {
+    'NIV': '78a9f6124f344018-01',  # New International Version 2011, licenciada pela Biblica via api.bible
+}
+
+# ===== OpenAI (proxy de IA por usuário) =====
+# Chave única do backend. Nunca é enviada ao frontend — o cliente só fala
+# com nossa API, que fala com a OpenAI. Isolamento e limite são por usuário,
+# controlados pelo model AIQuota e pelo histórico AIInteraction (apps.ai).
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+AI_DEFAULT_MODEL = os.getenv('AI_DEFAULT_MODEL', 'gpt-4o-mini')
+AI_MAX_TOKENS_PER_REQUEST = 800  # teto aplicado no servidor, ignora o que o cliente pedir
+
+# Memória semântica do Caleb (Fase 2) — só ativa em Postgres com pgvector;
+# em SQLite (dev local) cai automaticamente no fallback por palavra-chave.
+AI_EMBEDDING_MODEL = os.getenv('AI_EMBEDDING_MODEL', 'text-embedding-3-small')
+AI_EMBEDDING_DIMENSIONS = 1536
+
+# Cota mensal de tokens e limite de rajada por plano. Consumo é calculado por
+# agregação sobre AIInteraction (sem contador que precisa reset/Celery).
+AI_PLAN_LIMITS = {
+    'free': {'monthly_tokens': 50_000},
+    'pro': {'monthly_tokens': 500_000},
+    'unlimited': {'monthly_tokens': None},
+}
+
+# ===== Stripe (cobrança da assinatura do plano Pro) =====
+# 'unlimited' não é vendido self-serve, é atribuído manualmente pelo admin.
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_ID_PRO = os.getenv('STRIPE_PRICE_ID_PRO', '')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')

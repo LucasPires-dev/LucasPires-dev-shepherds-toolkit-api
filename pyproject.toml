@@ -19,6 +19,9 @@ gunicorn = "23.0.0"
 django-filter = "^25.2"
 requests = "^2.32.5"
 psycopg2 = "^2.9.11"
+openai = "^1.54.0"
+stripe = "^15.3.1"
+pgvector = "^0.5.0"
 
 
 [build-system]

@@ -29,6 +29,7 @@ class BibleVerse(models.Model):
     """Versículos da Bíblia"""
 
     VERSION_CHOICES = [
+        ('ALM1911', 'Almeida 1911 (Domínio Público)'),
         ('ACF', 'Almeida Corrigida Fiel'),
         ('ARA', 'Almeida Revista e Atualizada'),
         ('NVI', 'Nova Versão Internacional'),

@@ -29,17 +29,32 @@ class Finance(models.Model):
         ('pix', 'PIX'),
     ]
 
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('confirmed', 'Confirmado'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='finances')
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
     description = models.TextField(blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    transaction_date = models.DateField()
+    transaction_date = models.DateField(help_text='Data prevista/combinada (vencimento)')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    confirmed_date = models.DateField(null=True, blank=True,
+                                       help_text='Data em que o pagamento/recebimento de fato ocorreu')
     payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICES,
                                       blank=True, null=True)
     reference_number = models.CharField(max_length=100, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
+
+    group_id = models.UUIDField(null=True, blank=True, db_index=True,
+                                 help_text='Agrupa as transações de uma mesma compra parcelada ou despesa fixa')
+    installment_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    installment_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_recurring = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
