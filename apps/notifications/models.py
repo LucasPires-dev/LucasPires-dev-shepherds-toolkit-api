@@ -17,7 +17,7 @@ class Notification(models.Model):
         ('goal', 'Meta'),
         ('event', 'Evento'),
         ('prayer', 'Oração'),
-        ('sermon', 'Sermão'),
+        ('writing', 'Escrito'),
         ('member', 'Membro'),
         ('other', 'Outro'),
     ]

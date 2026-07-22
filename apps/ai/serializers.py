@@ -27,3 +27,14 @@ class AIResponseSerializer(serializers.Serializer):
     response = serializers.CharField()
     interaction_id = serializers.UUIDField()
     created_at = serializers.DateTimeField()
+    tokens_used = serializers.IntegerField()
+    tokens_remaining = serializers.IntegerField(allow_null=True)
+
+
+class AIUsageSerializer(serializers.Serializer):
+    """Serializer para o resumo de cota/uso de IA do usuário"""
+    plan = serializers.CharField()
+    monthly_token_limit = serializers.IntegerField(allow_null=True)
+    tokens_used = serializers.IntegerField()
+    tokens_remaining = serializers.IntegerField(allow_null=True)
+    period_reset_at = serializers.DateTimeField()

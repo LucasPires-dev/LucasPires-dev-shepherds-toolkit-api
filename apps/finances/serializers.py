@@ -5,9 +5,11 @@ class FinanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Finance
         fields = ['id', 'user', 'type', 'category', 'description',
-                 'amount', 'transaction_date', 'payment_method',
-                 'reference_number', 'notes', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+                 'amount', 'transaction_date', 'status', 'confirmed_date', 'payment_method',
+                 'reference_number', 'notes', 'group_id', 'installment_number',
+                 'installment_total', 'is_recurring', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'group_id', 'installment_number',
+                            'installment_total', 'is_recurring', 'created_at', 'updated_at']
 
 
 class FinanceSummarySerializer(serializers.Serializer):

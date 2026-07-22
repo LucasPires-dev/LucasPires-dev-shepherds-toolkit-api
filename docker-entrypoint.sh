@@ -22,28 +22,53 @@ cd /app
 python manage.py migrate --noinput
 echo "✓ Migrations aplicadas!"
 
-# Population Bíblia
+# Population Bíblia — só roda se ainda não houver versículos dessa versão
+# (evita limpar e repopular do zero toda vez que o container reinicia).
 if [ "${POPULATE_BIBLE}" = "true" ]; then
-  echo ""
-  echo "📖 Populando Bíblia..."
-  python manage.py populate_bible \
-    --source=${BIBLE_SOURCE:-api} \
-    --bible-version=${BIBLE_VERSION:-ACF} \
-    --clear
-  echo "✓ Bíblia populada!"
+  BIBLE_VERSION_TO_CHECK="${BIBLE_VERSION:-ALM1911}"
+  EXISTING_VERSES=$(python manage.py shell -c "
+from apps.bible.models import BibleVerse
+print(BibleVerse.objects.filter(version='${BIBLE_VERSION_TO_CHECK}').count())
+" 2>/dev/null | tail -1)
+
+  if [ "${EXISTING_VERSES}" -ge "${BIBLE_MIN_VERSES:-30000}" ] 2>/dev/null; then
+    echo ""
+    echo "📖 Bíblia ($BIBLE_VERSION_TO_CHECK) já populada ($EXISTING_VERSES versículos) — pulando."
+  else
+    echo ""
+    echo "📖 Populando Bíblia..."
+    python manage.py populate_bible \
+      --source=${BIBLE_SOURCE:-json} \
+      --file=${BIBLE_FILE:-ALM1911.json} \
+      --bible-version=${BIBLE_VERSION_TO_CHECK} \
+      --match-by=${BIBLE_MATCH_BY:-position} \
+      --clear
+    echo "✓ Bíblia populada!"
+  fi
 fi
 
 # Superuser
 if [ "${CREATE_SUPERUSER}" = "true" ]; then
-  echo ""
-  echo "👤 Criando superusuário..."
-  python manage.py shell << END
+  if [ -z "${DJANGO_SUPERUSER_PASSWORD}" ]; then
+    echo "⚠️  CREATE_SUPERUSER=true mas DJANGO_SUPERUSER_PASSWORD não foi definida. Pulando criação do superusuário."
+  else
+    echo ""
+    echo "👤 Criando superusuário..."
+    DJANGO_SUPERUSER_USERNAME="${DJANGO_SUPERUSER_USERNAME:-admin}" \
+    DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@example.com}" \
+    DJANGO_SUPERUSER_PASSWORD="${DJANGO_SUPERUSER_PASSWORD}" \
+    python manage.py shell << END
+import os
 from django.contrib.auth import get_user_model
 User = get_user_model()
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+username = os.environ['DJANGO_SUPERUSER_USERNAME']
+if not User.objects.filter(username=username).exists():
+    User.objects.create_superuser(username, os.environ['DJANGO_SUPERUSER_EMAIL'], os.environ['DJANGO_SUPERUSER_PASSWORD'])
     print("✓ Superusuário criado!")
+else:
+    print("✓ Superusuário já existe, mantido.")
 END
+  fi
 fi
 
 echo ""

@@ -18,12 +18,13 @@ from apps.bible.reading_plan_views import (
     ReadingDayViewSet
 )
 
-from apps.sermons.views import SermonViewSet, SermonTagViewSet
+from apps.writings.views import WritingViewSet, WritingTagViewSet
 from apps.goals.views import GoalViewSet, GoalTaskViewSet, GoalCommentViewSet
 from apps.events.views import EventViewSet
 from apps.members.views import MemberViewSet, PastoralVisitViewSet
 from apps.prayers.views import PrayerRequestViewSet
 from apps.finances.views import FinanceViewSet
+from apps.investments.views import InvestmentViewSet
 from apps.library.views import LibraryResourceViewSet, LibraryHighlightViewSet
 from apps.notifications.views import NotificationViewSet
 
@@ -48,9 +49,9 @@ router.register(r'reading-plans', UserReadingPlanViewSet, basename='reading-plan
 # ⚠️ IMPORTANTE: Não registre ReadingDayViewSet no router principal
 # Ele será acessado através de actions na UserReadingPlanViewSet ou via endpoints específicos
 
-# Sermon routes
-router.register(r'sermons', SermonViewSet, basename='sermon')
-router.register(r'sermon-tags', SermonTagViewSet, basename='sermon-tag')
+# Writing routes
+router.register(r'writings', WritingViewSet, basename='writing')
+router.register(r'writing-tags', WritingTagViewSet, basename='writing-tag')
 
 # Goal routes
 router.register(r'goals', GoalViewSet, basename='goal')
@@ -69,6 +70,7 @@ router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayer-reque
 
 # Finance routes
 router.register(r'finances', FinanceViewSet, basename='finance')
+router.register(r'investments', InvestmentViewSet, basename='investment')
 
 # Library routes
 router.register(r'library/resources', LibraryResourceViewSet, basename='library-resource')
@@ -88,4 +90,5 @@ urlpatterns = [
     path('api/auth/token/', include('apps.users.auth_urls')),
     # ✅ Endpoint separado para reading days se necessário
     path('api/reading-days/', include(reading_days_router.urls)),
+    path('api/ai/', include('apps.ai.urls')),
 ]
