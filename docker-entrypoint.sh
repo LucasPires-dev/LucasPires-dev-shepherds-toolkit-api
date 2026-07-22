@@ -28,15 +28,18 @@ if [ "${POPULATE_BIBLE}" = "true" ]; then
   BIBLE_VERSION_TO_CHECK="${BIBLE_VERSION:-ALM1911}"
   EXISTING_VERSES=$(python manage.py shell -c "
 from apps.bible.models import BibleVerse
-print(BibleVerse.objects.filter(version='${BIBLE_VERSION_TO_CHECK}').count())
-" 2>/dev/null | tail -1)
+print('VERSE_COUNT:' + str(BibleVerse.objects.filter(version='${BIBLE_VERSION_TO_CHECK}').count()))
+" 2>/dev/null | grep '^VERSE_COUNT:' | tail -1 | cut -d: -f2)
 
-  if [ "${EXISTING_VERSES}" -ge "${BIBLE_MIN_VERSES:-30000}" ] 2>/dev/null; then
+  if [ -z "${EXISTING_VERSES}" ]; then
+    echo ""
+    echo "⚠️  Não foi possível verificar o estado da Bíblia ($BIBLE_VERSION_TO_CHECK) — pulando população por segurança (não populamos automaticamente sem confirmar o estado atual)."
+  elif [ "${EXISTING_VERSES}" -ge "${BIBLE_MIN_VERSES:-30000}" ] 2>/dev/null; then
     echo ""
     echo "📖 Bíblia ($BIBLE_VERSION_TO_CHECK) já populada ($EXISTING_VERSES versículos) — pulando."
   else
     echo ""
-    echo "📖 Populando Bíblia..."
+    echo "📖 Populando Bíblia ($BIBLE_VERSION_TO_CHECK, $EXISTING_VERSES versículos encontrados)..."
     python manage.py populate_bible \
       --source=${BIBLE_SOURCE:-json} \
       --file=${BIBLE_FILE:-ALM1911.json} \
