@@ -181,6 +181,7 @@ if DB_ENGINE == 'postgres' and os.getenv('DB_NAME') and os.getenv('DB_USER'):
             'PORT': os.getenv('DB_PORT', '5432'),
             'OPTIONS': {
                 'sslmode': 'require',  # ← necessário para Supabase
+                'client_encoding': 'UTF8',
             }
         }
     }

@@ -72,9 +72,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('🙏 INICIANDO POPULAÇÃO DA BÍBLIA'))
         self.stdout.write(self.style.SUCCESS('=' * 70))
 
-        # Limpar dados se solicitado
+        # Limpar dados se solicitado (apenas da versão sendo populada — nunca
+        # apaga BibleBook nem versículos de outras versões).
         if clear_data:
-            self.clear_existing_data()
+            self.clear_existing_data(version)
 
         # Popular livros
         self.stdout.write('\n📚 Populando livros da Bíblia...')
@@ -95,21 +96,20 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('✅ POPULAÇÃO CONCLUÍDA COM SUCESSO!'))
         self.stdout.write(self.style.SUCCESS('=' * 70 + '\n'))
 
-    def clear_existing_data(self):
-        """Limpa dados existentes do banco"""
-        self.stdout.write(self.style.WARNING('\n⚠️  Limpando dados existentes...'))
+    def clear_existing_data(self, version):
+        """Limpa os versículos existentes de UMA versão específica.
 
-        verse_count = BibleVerse.objects.count()
-        book_count = BibleBook.objects.count()
+        Nunca apaga BibleBook (compartilhado entre versões, recriado via
+        get_or_create em populate_books) nem versículos de outras versões —
+        um clear ao repopular a ALM1911, por exemplo, não pode arrastar a KJV.
+        """
+        self.stdout.write(self.style.WARNING(f'\n⚠️  Limpando versículos existentes ({version})...'))
 
-        BibleVerse.objects.all().delete()
-        BibleBook.objects.all().delete()
+        verse_count = BibleVerse.objects.filter(version=version).count()
+        BibleVerse.objects.filter(version=version).delete()
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f'   ✓ {verse_count} versículos removidos\n'
-                f'   ✓ {book_count} livros removidos'
-            )
+            self.style.SUCCESS(f'   ✓ {verse_count} versículos ({version}) removidos')
         )
 
     def populate_books(self):
