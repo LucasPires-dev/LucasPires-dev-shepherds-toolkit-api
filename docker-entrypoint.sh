@@ -4,12 +4,17 @@ set -e
 export PYTHONPATH=/app:$PYTHONPATH
 
 # Docker/Swarm secrets: cada arquivo em /run/secrets/<nome> vira a env var
-# <NOME EM MAIÚSCULO>, lida normalmente pelo settings via os.getenv.
+# <NOME EM MAIÚSCULO>, lida normalmente pelo settings via os.getenv. Secret
+# vazio não é exportado — deixamos a var indefinida de propósito, para que
+# os.getenv('X', default) caia no default do código em vez de receber "".
 if [ -d /run/secrets ]; then
   for secret_file in /run/secrets/*; do
     [ -f "$secret_file" ] || continue
     var_name=$(basename "$secret_file" | tr '[:lower:]' '[:upper:]')
-    export "$var_name"="$(cat "$secret_file")"
+    secret_value="$(cat "$secret_file")"
+    if [ -n "$secret_value" ]; then
+      export "$var_name"="$secret_value"
+    fi
   done
 fi
 
