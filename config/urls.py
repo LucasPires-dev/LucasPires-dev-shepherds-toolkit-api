@@ -85,11 +85,11 @@ reading_days_router.register(r'', ReadingDayViewSet, basename='reading-day')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    path('api/auth/', include('apps.users.urls')),
-    path('api/auth/token/', include('apps.users.auth_urls')),
+    path('api/v1/', include(router.urls)),
+    path('api/v1/auth/', include('apps.users.urls')),
+    path('api/v1/auth/token/', include('apps.users.auth_urls')),
     # ✅ Endpoint separado para reading days se necessário
-    path('api/reading-days/', include(reading_days_router.urls)),
-    path('api/ai/', include('apps.ai.urls')),
-    path('api/integrations/', include('apps.integrations.urls')),
+    path('api/v1/reading-days/', include(reading_days_router.urls)),
+    path('api/v1/ai/', include('apps.ai.urls')),
+    path('api/v1/integrations/', include('apps.integrations.urls')),
 ]
