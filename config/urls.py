@@ -91,4 +91,5 @@ urlpatterns = [
     # ✅ Endpoint separado para reading days se necessário
     path('api/reading-days/', include(reading_days_router.urls)),
     path('api/ai/', include('apps.ai.urls')),
+    path('api/integrations/', include('apps.integrations.urls')),
 ]

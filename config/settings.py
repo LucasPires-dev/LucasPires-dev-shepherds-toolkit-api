@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'apps.library',
     'apps.ai',
     'apps.notifications',
+    'apps.integrations',
 ]
 
 MIDDLEWARE = [
@@ -250,3 +251,33 @@ STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_PRICE_ID_PRO = os.getenv('STRIPE_PRICE_ID_PRO', '')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
+# ===== Koinonia App (mini-OAuth interno: koinonia-app consome Calendar e
+# Writings desta conta via apps/integrations/views.py::Koinonia*View) =====
+KOINONIA_CLIENT_SECRET = os.getenv('KOINONIA_CLIENT_SECRET', '')
+
+# ===== Auth0 (broker do login social Google só para a integração de Google
+# Calendar em Configurações — não é o login principal do app, que continua
+# em apps.users) =====
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', '')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', '')
+# App M2M separada do Auth0 autorizada na Management API (scope read:users),
+# usada só para ler o refresh_token do Google guardado na identity do
+# usuário. Se não configurada, cai para a app regular acima (só funciona se
+# ela também tiver essa autorização).
+AUTH0_MGMT_CLIENT_ID = os.getenv('AUTH0_MGMT_CLIENT_ID', '') or AUTH0_CLIENT_ID
+AUTH0_MGMT_CLIENT_SECRET = os.getenv('AUTH0_MGMT_CLIENT_SECRET', '') or AUTH0_CLIENT_SECRET
+
+# ===== Google Calendar (credenciais do mesmo OAuth Client configurado na
+# conexão social Google do Auth0 — necessárias pra renovar o access_token
+# diretamente com o Google usando o refresh_token) =====
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_CALENDAR_SCOPE = os.getenv('GOOGLE_CALENDAR_SCOPE', 'https://www.googleapis.com/auth/calendar.events')
+
+# Chave simétrica (Fernet) para criptografar o refresh_token do Google em
+# repouso. O default abaixo só vale para dev local — em produção defina
+# FIELD_ENCRYPTION_KEY via variável de ambiente (gere com
+# `Fernet.generate_key()`), senão dados trocam de chave a cada deploy.
+FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY', 'o1x04nesMnUCKBbcXrtC5nXcFtn5nQcuJ2YqW7IsNiM=')
